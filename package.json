@@ -1,0 +1,22 @@
+{
+  "name": "ollama-simple-cli",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node .",
+    "debug": "node inspect test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@langchain/core": "^0.3.43",
+    "@langchain/ollama": "^0.2.0",
+    "dotenv": "^16.4.7",
+    "langchain": "^0.3.20",
+    "nodemon": "^3.1.9",
+    "ollama": "^0.5.13"
+  }
+}
