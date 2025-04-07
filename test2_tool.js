@@ -51,7 +51,7 @@ const rl = readline.createInterface({
     output: process.stdout,
 });
 
-const MODEL = "mistral:latest"; // o qualsiasi modello con tools
+const MODEL = 'qwen2.5:0.5b'; // "mistral:latest" non ha buoni risultati
 
 let messages = [
     {
@@ -60,55 +60,53 @@ let messages = [
     }
 ];
 
-async function chatCompletion(text, role="user") {
+async function chatCompletion(text, role = "user") {
     const userMessage = { role, content: text };
+    messages.push(userMessage);
     try {
         const response = await ollama.chat({
             model: MODEL,
             temperature: 0,
-            stream: true,
             verbose: true,
             tools: TOOLS,
-            messages: [...messages, userMessage]
+            messages: [...messages]
+            // sembra NON possibile avere i tools quando stream: true
         });
-        process.stdout.write("AI: ");
-        let aiReply = "";
-        for await (const part of response) {
+        messages.push(response.message);
 
-            // Check if the model decided to use the provided function
-            if (!part.message.tool_calls || part.message.tool_calls.length === 0) {
-                console.log("The model didn't use the function. Its response was:");
-                aiReply += part.message.content;
-                process.stdout.write(part.message.content);
-                if (part.done) {
-                    const ts = (part.eval_count / part.eval_duration) * Math.pow(10, 9);
-                    process.stdout.write("Token/s: " + ts.toFixed(2).toString());
-                    break;
-                }
-                return;
-            }
+        // Check if the model decided to use the provided function
+        if (!response.message.tool_calls || response.message.tool_calls.length === 0) {
+            console.log("The model didn't use any function tools");
+            process.stdout.write("AI: "+response.message.content+"\n");
+            return;
+        }
 
-            // Process function calls made by the model
-            if (part.message.tool_calls) {
-                const availableFunctions = {
-                    get_flight_times: getFlightTimes,
-                };
-                for (const tool of part.message.tool_calls) {
-                    const functionToCall = availableFunctions[tool.function.name];
-                    const functionResponse = functionToCall(tool.function.arguments);
-                    console.log('Using tool: ', functionToCall)
-                    console.log('Function response: ', functionResponse)
-                    // Add function response to the conversation
-                    // Second API call: Get final response from the model
-                    chatCompletion(functionResponse, 'tool')
-                }
-                return;
+        // Process function calls made by the model
+        if (response.message.tool_calls) {
+            const availableFunctions = {
+                get_flight_times: getFlightTimes,
+            };
+            for (const tool of response.message.tool_calls) {
+                const functionToCall = availableFunctions[tool.function.name];
+                const functionResponse = functionToCall(tool.function.arguments);
+                console.log('Using function: ', tool.function.name)
+                console.log('Function response: ', functionResponse)
+                // Add function response to the conversation
+                messages.push({
+                    role: 'tool',
+                    content: functionResponse,
+                });
             }
         }
-        process.stdout.write("\n")
-        messages.push(userMessage);
-        messages.push({ role: 'assistant', content: aiReply });
-        // process.stdout.write(JSON.stringify(messages, null, 2));
+
+        // Second API call: Get final response from the model
+        const finalResponse = await ollama.chat({
+            model: MODEL,
+            messages: messages,
+        });
+        process.stdout.write(finalResponse.message.content + "\n")
+        messages.push({ role: 'assistant', content: finalResponse.message.content });
+        process.stdout.write(JSON.stringify(messages, null, 2));
     } catch (error) {
         console.log("Error:", error);
     }
@@ -125,55 +123,8 @@ function chatLoop() {
     });
 }
 
-// chatLoop();
-
-async function run(model, prompt) {
-    // Initialize conversation with a user query
-    let messages = [{ role: 'user', content: prompt }]; // 'What is the flight time from New York (LGA) to Los Angeles (LAX)?' 
-
-    // First API call: Send the query and function description to the model
-    const response = await ollama.chat({
-        model: model,
-        messages: messages,
-        tools: TOOLS
-    })
-    // Add the model's response to the conversation history
-    messages.push(response.message);
-
-    // Check if the model decided to use the provided function
-    if (!response.message.tool_calls || response.message.tool_calls.length === 0) {
-        console.log("The model didn't use the function. Its response was:");
-        console.log(response.message.content);
-        return;
-    }
-
-    // Process function calls made by the model
-    if (response.message.tool_calls) {
-        const availableFunctions = {
-            get_flight_times: getFlightTimes,
-        };
-        for (const tool of response.message.tool_calls) {
-            const functionToCall = availableFunctions[tool.function.name];
-            const functionResponse = functionToCall(tool.function.arguments);
-            console.log('functionResponse', functionResponse)
-            // Add function response to the conversation
-            messages.push({
-                role: 'tool',
-                content: functionResponse,
-            });
-        }
-    }
-
-    // Second API call: Get final response from the model
-    const finalResponse = await ollama.chat({
-        model: model,
-        messages: messages,
-    });
-    console.log(finalResponse.message.content);
-}
+chatLoop();
 
 // const prompt = "Qual'è il tempo di viaggio in treno tra Roma e Firenze?";
-const prompt = "Come mai il cielo è blu?";
+// const prompt = "Come mai il cielo è blu?";
 // const prompt = "What is the flight time from New York (LGA) to Los Angeles (LAX)?";
-
-run('mistral:latest', prompt).catch(error => console.error("An error occurred:", error)); 

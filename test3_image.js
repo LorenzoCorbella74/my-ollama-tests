@@ -20,7 +20,7 @@ async function chatCompletion(text) {
     const userMessage = { 
         role: 'user', 
         content: text,
-        images:['/Users/lorecorbe/Downloads/iLoxCRi_mRw-full.jpg'] 
+        images:['/multa.png'] // /Users/lorecorbe/Downloads/iLoxCRi_mRw-full.jpg
     };
     try {
         const response = await ollama.chat({

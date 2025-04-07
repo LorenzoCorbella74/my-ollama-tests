@@ -14,26 +14,38 @@ const rl = readline.createInterface({
 let messages = [
   {
       role: 'system',
-      content: "You are a helpfull AI assistant called MAX. Reply from now on in Italian even if the request are in other languages."
+      content: "You are an expert for games like D&D 5th edition."
   }
 ];
+
+let jsonSchema = {
+  type: "object",
+  properties: {
+      name: {
+          type: "string"
+      },
+      kind: {
+          type: "string"
+      },
+  },
+  required: ["name", "kind"]
+}
 
 // Create a function to call the Langchain API
 async function chatCompletion(text) {
   const userMessage = { role: 'user', content: text };
   messages.push(userMessage);
   const model = new Ollama({
-    model: "phi4:latest",
-    temperature: 0.1,
-    messages
-    // baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434"
-    // verbose:true
+    model: 'qwen2.5:0.5b', // "phi4:latest",
+    temperature: 0.9,
+    messages,
+    format: jsonSchema,
   });
   try {
-    const response = await model.invoke(messages); // si può passare anche text
-    console.log("AI:", response);
-    process.stdout.write("\n")
+    const response = await model.invoke(messages);
+    process.stdout.write("AI:"+ response + "\n")
     messages.push({ role: 'assistant', content: response });
+    // process.stdout.write(JSON.stringify(messages, null, 2));
   } catch (error) {
     console.log("Error:", error);
   }
@@ -50,14 +62,9 @@ function getPrompt() {
   });
 }
 
-getPrompt(); // Start the prompt
-
-
+getPrompt(); // Generate a random name for an Elf (kind always equals Elf)
 /*
-
-TODO: 
-https://hashnode.com/@k33g
-https://k33g.hashnode.dev/lets-chat-about-programming-with-langchainjs-and-ollama
-
+  Oppure con ZOD:
+  https://k33g.hashnode.dev/structured-output-with-ollama-and-langchainjs-the-return?source=more_series_bottom_blogs
 
 */

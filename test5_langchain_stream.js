@@ -24,16 +24,25 @@ async function chatCompletion(text) {
   messages.push(userMessage);
   const model = new Ollama({
     model: "phi4:latest",
-    temperature: 0.1,
-    messages
+    temperature: 0.0, // https://k33g.hashnode.dev/get-started-easily-with-langchainjs-and-ollama
+    repeatLastN: 2,
+    repeatPenalty:2.2,
+    topK: 10,
+    topP: 0.5,
     // baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434"
     // verbose:true
   });
   try {
-    const response = await model.invoke(messages); // si può passare anche text
-    console.log("AI:", response);
+    const response = await model.stream(messages); // avrei potuto passare anche text
+    process.stdout.write("AI: ");
+    let aiReply = "";
+    for await (const part of response) {
+      aiReply += part;
+      process.stdout.write(part);
+    }
     process.stdout.write("\n")
-    messages.push({ role: 'assistant', content: response });
+    messages.push(userMessage);
+    messages.push({ role: 'assistant', content: aiReply });
   } catch (error) {
     console.log("Error:", error);
   }

@@ -14,9 +14,11 @@
   "dependencies": {
     "@langchain/core": "^0.3.43",
     "@langchain/ollama": "^0.2.0",
+    "chalk": "^5.4.1",
     "dotenv": "^16.4.7",
     "langchain": "^0.3.20",
     "nodemon": "^3.1.9",
-    "ollama": "^0.5.13"
+    "ollama": "^0.5.13",
+    "zod": "^3.24.2"
   }
 }
